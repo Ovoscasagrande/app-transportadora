@@ -2609,7 +2609,7 @@ async function pagAvisosGestao(el){
     </div>`}).join('')}</div></div>`;
   document.getElementById('av-busca').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    document.querySelectorAll('#av-g tbody tr').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
+    document.querySelectorAll('#av-g .listcard, #av-g .listcard *').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
   };
   g.querySelectorAll('[data-av]').forEach(b=>b.onclick=async()=>{
     const r=await upd('avisos',b.dataset.av,{status:b.dataset.st});
@@ -2621,7 +2621,7 @@ const CONF_ITENS=['Motorista retornou?','Roteiro informado corretamente?','Todas
 const rotTxt=j=>{const r=[j.roteiro,...(j.roteiros_extra||[])].filter(x=>x);if(!r.length)return '📦 Carregamento';return r.map(x=>'R'+x).join(' + ')};
 PAGES.conferencia=async el=>{
   el.innerHTML=`<h1 class="pg">Conferência de jornadas</h1><div id="cf">${empty('Carregando…')}</div>`;
-  const {data:lista}=await sb.from('jornadas').select('*, veiculos(placa,modelo), motoristas(nome)').eq('status','conferencia').order('fim',{ascending:false}).limit(100);
+  const {data:lista}=await empFilter(sb.from('jornadas').select('*, veiculos(placa,modelo), motoristas(nome)')).eq('status','conferencia').order('fim',{ascending:false}).limit(100);
   const c=$('cf');
   if(!lista||!lista.length){c.innerHTML=empty('Nenhuma jornada aguardando conferência 🎉');return}
   const {data:checks}=await sb.from('jornada_conferencia').select('jornada_id,ok');
@@ -2926,7 +2926,7 @@ PAGES.abastecimentos=async el=>{
   $('f-btn').onclick=carregar;carregar();
   document.getElementById('ab-busca').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    document.querySelectorAll('#ab-l tbody tr').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
+    document.querySelectorAll('#ab-l .listcard, #ab-l .listcard *').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
   };
 };
 PAGES.despesas=async el=>{
@@ -2948,7 +2948,7 @@ PAGES.despesas=async el=>{
     </div></div>`).join('')}</div></div>`;
   document.getElementById('dp-busca').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    document.querySelectorAll('#dp tbody tr').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
+    document.querySelectorAll('#dp .listcard, #dp .listcard *').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
   };
   d.querySelectorAll('[data-ok]').forEach(b=>b.onclick=async()=>{if(await upd('despesas',b.dataset.ok,{status:'aprovada',aprovada_por:ME.id,aprovada_em:new Date().toISOString()}))go('despesas')});
   d.querySelectorAll('[data-no]').forEach(b=>b.onclick=async()=>{
@@ -3005,7 +3005,7 @@ PAGES.multas=async el=>{
     </div></div>`).join('')}</div></div>`;
   document.getElementById('mt-busca').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    document.querySelectorAll('#m-list tbody tr').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
+    document.querySelectorAll('#m-list .listcard, #m-list .listcard *').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
   };
   l.querySelectorAll('[data-cie]').forEach(b=>b.onclick=async()=>{
     const {error}=await sb.rpc('confirmar_ciencia',{p_multa_id:b.dataset.cie});
@@ -3109,7 +3109,7 @@ function chartTheme(){
 async function renderCharts(e){
   const box=document.getElementById('db-charts');if(!box)return;
   const f=x=>(x||'').slice(0,10);
-  const ini='2026-10-01', fim='2026-11-30';
+  const {ini,fim}=periodoMes(2);
   const [jrn,abs,desp,rec,mlt,despP]=await Promise.all([
     empFilter(sb.from('jornadas').select('inicio,km_inicial,km_final,veiculo_id,motorista_id,status')).gte('inicio',ini).lte('inicio',fim+'T23:59:59'),
     empFilter(sb.from('abastecimentos').select('veiculo_id,litros,valor_total,data')).gte('data',ini).lte('data',fim+'T23:59:59'),
@@ -3119,7 +3119,7 @@ async function renderCharts(e){
     empFilter(sb.from('despesas').select('valor,data')).eq('status','aguardando').gte('data',ini).lte('data',fim+'T23:59:59')
   ]);
   const J=jrn.data||[],A=abs.data||[],D=desp.data||[],R=rec.data||[],M=mlt.data||[],DP=despP.data||[];
-  const meses=['Jun','Jul','Ago','Set','Out','Nov'];
+  const meses=mesesLabel(2);
   const mk=()=>{const m={};meses.forEach(x=>m[x]=0);return m};
   const mRec=mk(),mDesp=mk(),mLuc=mk(),mMult=mk(),mPend=mk();
   const idx=dt=>{const mm=(dt||'').slice(5,7);return meses[Number(mm)-6]||null};
@@ -3227,7 +3227,7 @@ async function renderCharts(e){
 }
 PAGES.relatorios=async el=>{
   el.innerHTML=`<h1 class="pg">Relatórios</h1><div id="rel">${empty('Carregando…')}</div>`;
-  const ini='2026-06-01', fim='2026-11-30';
+  const {ini,fim}=periodoMes(6);
   const [mts,jrn,abs,desp,mlt]=await Promise.all([
     empFilter(sb.from('motoristas').select('id,nome,empresa')),
     empFilter(sb.from('jornadas').select('motorista_id,km_inicial,km_final,inicio')).gte('inicio',ini).lte('inicio',fim+'T23:59:59'),
@@ -3239,7 +3239,7 @@ PAGES.relatorios=async el=>{
   const box=$('rel');
   const fmtK=v=>v>=1000?(v/1000).toFixed(1).replace('.',',')+'k':Math.round(v);
   const acc=chartTheme().ok;
-  const meses=['Jun','Jul','Ago','Set','Out','Nov'];
+  const meses=mesesLabel(6);
   const idx=dt=>{const mm=(dt||'').slice(5,7);return meses[Number(mm)-6]||null};
   const mk=()=>{const m={};meses.forEach(x=>m[x]=0);return m};
   const mComb=mk(),mDesp=mk();
@@ -3534,7 +3534,7 @@ PAGES.motoristas=async el=>{
   });
   document.getElementById('mo-busca').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    document.querySelectorAll('#mo-list tbody tr').forEach(tr=>{
+    document.querySelectorAll('#mo-list .listcard, #mo-list .listcard *').forEach(tr=>{
       tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none';
     });
   };
@@ -3834,7 +3834,7 @@ PAGES.os=async el=>{
   </div></div>`).join('')}</div></div>`;
   document.getElementById('os-busca').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    document.querySelectorAll('#o-list tbody tr').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
+    document.querySelectorAll('#o-list .listcard, #o-list .listcard *').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
   };
   l.querySelectorAll('[data-osd]').forEach(b=>b.onclick=async()=>{
     const o=lista.find(x=>x.id===b.dataset.osd);
@@ -3949,7 +3949,7 @@ PAGES.usuarios=async el=>{
   // ---- editar aprovado ----
   document.getElementById('u-busca').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    document.querySelectorAll('#u-list tbody tr').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
+    document.querySelectorAll('#u-list .listcard, #u-list .listcard *').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
   };
   l.querySelectorAll('[data-ued]').forEach(b=>b.onclick=()=>{
     const u=lista.find(x=>x.id===b.dataset.ued);if(!u)return;
@@ -3994,7 +3994,7 @@ PAGES.auditoria=async el=>{
     </div></div>`}).join('')}</div></div>`;
   document.getElementById('au-busca').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    document.querySelectorAll('#au tbody tr').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
+    document.querySelectorAll('#au .listcard, #au .listcard *').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
   };
 };
 /* ============ RECEBIMENTOS (gerência/conferente) ============ */
@@ -4027,7 +4027,7 @@ PAGES.recebimentos=async el=>{
   carregar();
   document.getElementById('rc-busca').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    document.querySelectorAll('#rc tbody tr').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
+    document.querySelectorAll('#rc .listcard, #rc .listcard *').forEach(tr=>tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none');
   };
 };
 /* ============ RECEBIMENTO — lançamento (motorista Transportadora) ============ */
@@ -4828,6 +4828,20 @@ function parsePedido(items){
   return out;
 }
 function fmtBR2(v){return (Math.round(v*100)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+/* período dos gráficos, sempre relativo a hoje (antes era fixo em 2026-10/11 e zerava no mês seguinte) */
+function periodoMes(meses){
+  const hoje=new Date();
+  const iso=d=>d.toISOString().slice(0,10);
+  const fim=new Date(hoje.getFullYear(),hoje.getMonth()+1,0);      // último dia do mês atual
+  const ini=new Date(hoje.getFullYear(),hoje.getMonth()-(meses-1),1);
+  return {ini:iso(ini),fim:iso(fim)};
+}
+function mesesLabel(meses){
+  const N=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const hoje=new Date(), out=[];
+  for(let i=meses-1;i>=0;i--){const d=new Date(hoje.getFullYear(),hoje.getMonth()-i,1);out.push(N[d.getMonth()])}
+  return out;
+}
 function detectTipoDoc(items){
   for(const it of items){
     if(it.str&&/DANFE/i.test(it.str))return 'nf';
