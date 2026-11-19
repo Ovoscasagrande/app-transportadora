@@ -32,12 +32,15 @@
   --ink:#f5f5f5;
   --muted:#9e9e9e;
   --faint:#6b6b6b;
+  /* aliases usados no HTML (faltavam — corrigido 19/11) */
+  --acc:#1E5AA8;
+  --mut:#9e9e9e;
   /* marca (troca por empresa via JS) */
   --primary-color:#1E5AA8;         /* OVOS (âmbar) */
   --primary-contrast:#ffffff;      /* texto sobre o primário —
                                        OVOS: #121212 · TRANSPORTADORA (#1E5AA8) e DISTRIBUIDORA (#797F35): #ffffff
                                        (o JS troca as DUAS variáveis juntas ao trocar de empresa) */
-  --primary-soft:rgba(252,200,92,.14); /* fundo suave do primário */
+  --primary-soft:rgba(30,90,168,.14); /* fundo suave do primário */
   /* semânticas */
   --ok:#4caf50; --ok-soft:rgba(76,175,80,.14);
   --bad:#e05252; --bad-soft:rgba(224,82,82,.14);
@@ -491,6 +494,22 @@ body.sem-tabbar main{padding-bottom:var(--sp-5)}
 .leaflet-container{background:#1a1a1a}
 .leaflet-control a{background:#1e1e1e!important;color:#f5f5f5!important;border-color:#333!important}
 
+
+/* ---- classes usadas no HTML que nao tinham regra (adicionado 19/11) ---- */
+.hint{color:var(--muted);font-size:12px;line-height:1.4}
+.lc-ico{width:40px;height:40px;border-radius:var(--r-md);background:var(--field);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink)}
+.lc-ico svg{width:20px;height:20px}
+.fotoprev{max-width:100%;border-radius:var(--r-md);margin-top:8px;display:block}
+.photo{max-width:100%;border-radius:var(--r-md);display:block;margin-top:6px}
+.mini-sel{background:var(--field);border:1px solid var(--divider);color:var(--ink);border-radius:var(--r-sm);padding:8px 10px;font-size:13px;font-family:var(--font);min-height:40px}
+.dx{color:var(--muted);font-size:12px}
+.rx{color:var(--bad);font-size:12px;font-weight:600}
+.dbtabs{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px}
+.dynrow{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.dynrow input,.dynrow select{flex:1;min-width:90px}
+.bx-motivo{width:100%;margin-top:8px}
+.mo-emp{display:inline-flex;align-items:center;gap:6px;margin-right:12px;font-size:13px}
+.empchip{display:inline-flex;align-items:center;gap:6px;background:var(--field);border:1px solid var(--divider);border-radius:var(--r-pill);padding:4px 12px;font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -601,9 +620,10 @@ function applyBranding(){
   const e=empAtiva();
   document.body.dataset.emp=e;
   const r=document.documentElement.style;
-  if(e==='TRANSPORTADORA'){r.setProperty('--primary-color','#1E5AA8');r.setProperty('--primary-contrast','#ffffff')}
-  else if(e==='DISTRIBUIDORA'){r.setProperty('--primary-color','#797F35');r.setProperty('--primary-contrast','#ffffff')}
-  else{r.setProperty('--primary-color','#FCC85C');r.setProperty('--primary-contrast','#121212')}
+  // tema (cor, contraste, alias --acc e a versao suave para fundos)
+  if(e==='TRANSPORTADORA'){r.setProperty('--primary-color','#1E5AA8');r.setProperty('--primary-contrast','#ffffff');r.setProperty('--acc','#1E5AA8');r.setProperty('--primary-soft','rgba(30,90,168,.16)')}
+  else if(e==='DISTRIBUIDORA'){r.setProperty('--primary-color','#797F35');r.setProperty('--primary-contrast','#ffffff');r.setProperty('--acc','#797F35');r.setProperty('--primary-soft','rgba(121,127,53,.18)')}
+  else{r.setProperty('--primary-color','#FCC85C');r.setProperty('--primary-contrast','#121212');r.setProperty('--acc','#FCC85C');r.setProperty('--primary-soft','rgba(252,200,92,.14)')}
   const lg=EMPLOGO[e]||'logo-branca.png';
   // (marca d água de fundo removida — layout clean)
   const h2=document.getElementById('lg-app');if(h2)h2.textContent=EMPNOME[e];
@@ -3079,7 +3099,13 @@ PAGES.dashboard=async el=>{
 };
 /* ===== gráficos do dashboard (Chart.js, cores do tema) ===== */
 const CHARTS={};
-function chartTheme(){return {ok:getComputedStyle(document.body).getPropertyValue('--acc').trim()||'#fcc85c'}}
+function chartTheme(){
+  const cs=getComputedStyle(document.body);
+  const cor=(cs.getPropertyValue('--primary-color')||'').trim()||'#FCC85C';
+  const mut=(cs.getPropertyValue('--muted')||'').trim()||'#9e9e9e';
+  const ink=(cs.getPropertyValue('--ink')||'').trim()||'#f5f5f5';
+  return {ok:cor,cor:cor,mut:mut,ink:ink};
+}
 async function renderCharts(e){
   const box=document.getElementById('db-charts');if(!box)return;
   const f=x=>(x||'').slice(0,10);
