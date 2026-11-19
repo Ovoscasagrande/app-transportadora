@@ -4761,8 +4761,9 @@ function parsePedido(items){
       if(qt!=null){
         // procura o CÓDIGO do produto (célula isolada ou "cod - desc")
         let cod=null,descIni='';
+        // o codigo é o PRIMEIRO numero depois da coluna de quantidade — nao fixar x
         for(const c of L.cells){
-          if(c.x>=80&&c.x<=100&&/^\d{2,6}$/.test(c.s)){cod=c.s;break}
+          if(c.x>70&&c.x<200&&/^\d{2,6}$/.test(c.s)){cod=c.s;break}
           const mm=c.s.match(/^(\d{2,6})\s*-\s*(.+)$/);
           if(mm&&c.x<200){cod=mm[1];descIni=mm[2];break}
         }
@@ -4772,7 +4773,11 @@ function parsePedido(items){
         for(const c of L.cells){
           if(c.x>100&&c.x<=440&&c.s!=='-'&&c.s!==cod&&!partes.includes(c.s))partes.push(c.s);
         }
+        // valores da linha (colunas à direita): unitario e subtotal
+        const vals=L.cells.filter(c=>c.x>430&&/^[\d.,]+$/.test(c.s)).map(c=>numBR(c.s)).filter(v=>v!=null);
         atual={codigo:cod,qtd:qt,descricao:partes.join(' ').replace(/\s+/g,' ').replace(/\s*-\s*$/,'').trim()};
+        if(vals.length>=2){atual.vunit=vals[0];atual.subtotal=vals[1]}
+        else if(vals.length===1){atual.subtotal=vals[0]}
         out.itens.push(atual);
       }else if(atual){
         // CONTINUAÇÃO da descrição na linha de baixo — é aqui que fica a gramatura/embalagem
@@ -4807,8 +4812,22 @@ function parsePedido(items){
     const m=jt.match(/\bTotal\s+([\d.,]+)/);
     if(m){out.total=numBR(m[1]);break}
   }
+  // ---- CONFERÊNCIA: os itens lidos fecham com o total do PDF? ----
+  const some=(out.itens||[]).reduce((s,i)=>s+(i.subtotal!=null?i.subtotal:0),0);
+  const todosComValor=(out.itens||[]).length>0&&(out.itens||[]).every(i=>i.subtotal!=null);
+  out.somaItens=Math.round(some*100)/100;
+  out.conferencia={ok:true,motivo:null};
+  if(out.total!=null&&todosComValor){
+    const dif=Math.round((some-out.total)*100)/100;
+    if(Math.abs(dif)>0.05){
+      out.conferencia={ok:false,motivo:'Soma dos itens difere do total do PDF em R$ '+fmtBR2(Math.abs(dif))+' (itens '+fmtBR2(some)+' x total '+fmtBR2(out.total)+'). Pode haver item não lido.'};
+    }
+  }else if(out.total!=null&&!(out.itens||[]).some(i=>i.subtotal!=null)){
+    out.conferencia={ok:null,motivo:'PDF sem valor por item — confira manualmente.'};
+  }
   return out;
 }
+function fmtBR2(v){return (Math.round(v*100)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function detectTipoDoc(items){
   for(const it of items){
     if(it.str&&/DANFE/i.test(it.str))return 'nf';
@@ -4857,6 +4876,8 @@ PAGES.nfs=async el=>{
         if(!r.numero||!r.itens.length){toast('Não consegui ler '+f.name);continue}
         r._arquivo=f;
         lote.push(r);
+        // aviso imediato: pedido lido nao fecha com o total do PDF
+        if(r.conferencia&&r.conferencia.ok===false){toast('⚠ '+f.name+': '+r.conferencia.motivo)}
       }catch(e){toast('Erro em '+f.name+': '+err(e))}
     }
     // casar PEDIDO com NF pelo CNPJ do cliente
